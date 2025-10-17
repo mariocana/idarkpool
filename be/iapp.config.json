@@ -1,0 +1,6 @@
+{
+  "defaultChain": "bellecour",
+  "projectName": "iDarkPool",
+  "template": "Python3.13",
+  "walletPrivateKey": "0xa0c480decace3163da58e5f0d5bb0348d470a9636c001e418e1436f9e2844259"
+}

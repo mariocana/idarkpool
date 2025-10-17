@@ -31,8 +31,8 @@ PRIVATE_KEY = ENCLAVE_PRIV  # same in this MVP
 RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
 CHAIN_ID = int(os.getenv("CHAIN_ID", 31337))
 SETTLEMENT_ADDR = os.getenv("SETTLEMENT_ADDR")
-BASE_TOKEN = os.getenv("BASE_TOKEN", "0xBaseToken") #WETHm
-QUOTE_TOKEN = os.getenv("QUOTE_TOKEN", "0xQuoteToken") #USDCm
+BASE_TOKEN = os.getenv("BASE_TOKEN", "0xBaseToken")
+QUOTE_TOKEN = os.getenv("QUOTE_TOKEN", "0xQuoteToken")
 MM_ADDRESS = os.getenv("MM_ADDRESS", "0x000000000000000000000000000000000000dEaD")
 REF_PRICE = float(os.getenv("REF_PRICE", "2000.0"))
 
