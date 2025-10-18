@@ -25,13 +25,44 @@ REF_PRICE = float(os.getenv("REF_PRICE", "2000.0"))
 # ---------------- MODELS ----------------
 class Order(BaseModel):
     owner: str
-    side: str
+    side: str                 # "buy" or "sell"
     tokenIn: str
     tokenOut: str
-    amountIn: str
-    amountOut: str
+    amount: float
     price: float
     deadline: int = int(time.time()) + 600
+
+class Trade(BaseModel):
+    maker: str
+    taker: str
+    tokenA: str
+    tokenB: str
+    amountA: str
+    amountB: str
+    nonce: int
+    deadline: int
+
+# ------------------ STARTUP ------------------
+
+@app.on_event("startup")
+def bootstrap_market():
+    """Run once at startup: inject market-maker quotes."""
+    print("🚀 Bootstrapping orderbook with MM quotes...")
+    book = load_book()
+    prune_expired(book)
+    sort_book(book)
+
+    inject_mm_quotes(
+        book=book,
+        ref_price=REF_PRICE,
+        mm_address=MM_ADDRESS,
+        base_token=BASE_TOKEN,
+        quote_token=QUOTE_TOKEN,
+        spread_bps=50,  # ±0.5% spread
+        size_base=1.0
+    )
+    save_book(book)
+    print(f"✅ MM book initialized at ref {REF_PRICE}")
 
 
 # ---------------- ROUTES ----------------
