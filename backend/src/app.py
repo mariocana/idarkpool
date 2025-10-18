@@ -2,14 +2,16 @@ import os, json
 from orderbook import load_book, save_book, add_orders, prune_expired, sort_book, export_orderbook
 from match_engine import build_trade, sign_trade, try_match
 from mm_bot import inject_mm_quotes
+from dotenv import load_dotenv
 
 # -------------------------------------------------
 # 1️⃣  Environment
 # -------------------------------------------------
+load_dotenv()
 ENCLAVE_PRIV = os.getenv("ENCLAVE_PRIV")
 BASE_TOKEN = os.getenv("BASE_TOKEN", "0xWETHm")
 QUOTE_TOKEN = os.getenv("QUOTE_TOKEN", "0xUSDCm")
-MM_ADDRESS = os.getenv("MM_ADDRESS", "0x000000000000000000000000000000000000dEaD")
+MM_ADDRESS = os.getenv("ENCLAVE_PRIV", "0x000000000000000000000000000000000000dEaD")
 REF_PRICE = float(os.getenv("REF_PRICE", "2000.0"))
 
 IEXEC_IN = os.getenv("IEXEC_IN", "./iexec_in")
@@ -30,8 +32,8 @@ def main():
 
     # --- Load or init orderbook ---
     book = load_book()
+    print("book loaded  ..  " ,book)
 
-    export_orderbook()
     # --- Inject Market Maker quotes ---
     inject_mm_quotes(
         book=book,
@@ -42,6 +44,8 @@ def main():
         spread_bps=50,   # 0.5% spread
         size_base=1.0,
     )
+
+    print("book loaded  ..  " ,book)
 
     # --- Load user orders (if any) ---
     if os.path.exists(ORDERS_PATH):
@@ -92,8 +96,6 @@ def main():
 
 
 if __name__ == "__main__":
-    print("🚀 iDarkPool Worker starting...")
-
     main()
 
     export_orderbook()
