@@ -39,14 +39,3 @@ def sort_book(book: Dict[str, List[dict]]) -> None:
     # Highest bid first; lowest ask first
     book["buy"].sort(key=lambda x: (float(x["price"]), -x.get("ts", 0)), reverse=True)
     book["sell"].sort(key=lambda x: (float(x["price"]), x.get("ts", 0)))
-
-def export_orderbook():
-    """Save the current orderbook to /iexec_out/orderbook.json"""
-    book = load_book()
-    prune_expired(book)
-    sort_book(book)
-
-    os.makedirs("/iexec_out", exist_ok=True)
-    with open(BOOK_PATH, "w") as f:
-        json.dump(book, f, indent=2)
-    print(f"📘 Orderbook exported to {BOOK_PATH}")
