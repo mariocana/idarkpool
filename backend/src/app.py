@@ -1,131 +1,85 @@
-# app.py
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import os, json, time
-
-# --- Internal imports ---
-from orderbook import load_book, save_book, add_orders, prune_expired, sort_book
+import os, json
+from orderbook import load_book, save_book, add_orders, prune_expired, sort_book, export_orderbook
 from match_engine import build_trade, sign_trade, try_match
 from mm_bot import inject_mm_quotes
 
-app = FastAPI(title="iDarkPool Worker API")
-
-# Environment config
-DATA_DIR = os.getenv("DATA_DIR", "./data")
-ORDERS_PATH = os.path.join(DATA_DIR, "orders.json")
-RESULT_PATH = os.path.join(DATA_DIR, "result.json")
+# -------------------------------------------------
+# 1️⃣  Environment
+# -------------------------------------------------
 ENCLAVE_PRIV = os.getenv("ENCLAVE_PRIV")
-
 BASE_TOKEN = os.getenv("BASE_TOKEN", "0xWETHm")
 QUOTE_TOKEN = os.getenv("QUOTE_TOKEN", "0xUSDCm")
-MM_ADDRESS = os.getenv("MM_ADDRESS", "0xMarketMaker")
+MM_ADDRESS = os.getenv("MM_ADDRESS", "0x000000000000000000000000000000000000dEaD")
 REF_PRICE = float(os.getenv("REF_PRICE", "2000.0"))
 
+IEXEC_IN = os.getenv("IEXEC_IN", "./iexec_in")
+IEXEC_OUT = os.getenv("IEXEC_OUT", "./iexec_out")
+os.makedirs(IEXEC_OUT, exist_ok=True)
 
-# ---------------- MODELS ----------------
-class Order(BaseModel):
-    owner: str
-    side: str                 # "buy" or "sell"
-    tokenIn: str
-    tokenOut: str
-    amount: float
-    price: float
-    deadline: int = int(time.time()) + 600
+ORDERS_PATH = os.path.join(IEXEC_IN, "orders.json")
+RESULT_PATH = os.path.join(IEXEC_OUT, "result.json")
 
-class Trade(BaseModel):
-    maker: str
-    taker: str
-    tokenA: str
-    tokenB: str
-    amountA: str
-    amountB: str
-    nonce: int
-    deadline: int
+# -------------------------------------------------
+# 2️⃣  Main Worker Logic
+# -------------------------------------------------
+def main():
+    print("🚀 iDarkPool Worker starting...")
 
-# ------------------ STARTUP ------------------
+    if not ENCLAVE_PRIV:
+        raise SystemExit("❌ ENCLAVE_PRIV not set")
 
-@app.on_event("startup")
-def bootstrap_market():
-    """Run once at startup: inject market-maker quotes."""
-    print("🚀 Bootstrapping orderbook with MM quotes...")
+    # --- Load or init orderbook ---
     book = load_book()
-    prune_expired(book)
-    sort_book(book)
 
+    export_orderbook()
+    # --- Inject Market Maker quotes ---
     inject_mm_quotes(
         book=book,
         ref_price=REF_PRICE,
         mm_address=MM_ADDRESS,
         base_token=BASE_TOKEN,
         quote_token=QUOTE_TOKEN,
-        spread_bps=50,  # ±0.5% spread
-        size_base=1.0
+        spread_bps=50,   # 0.5% spread
+        size_base=1.0,
     )
-    save_book(book)
-    print(f"✅ MM book initialized at ref {REF_PRICE}")
 
+    # --- Load user orders (if any) ---
+    if os.path.exists(ORDERS_PATH):
+        with open(ORDERS_PATH) as f:
+            orders = json.load(f)
+            print(f"📥 Loaded {len(orders)} user orders.")
+            add_orders(book, orders)
 
-# ---------------- ROUTES ----------------
-
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "iDarkPool worker REST API running"}
-
-
-@app.post("/orders")
-def submit_order(order: Order):
-    """Accept new orders and update the local book."""
-    book = load_book()
-    add_orders(book, [order.dict()])
-    save_book(book)
-
-    with open(ORDERS_PATH, "w") as f:
-        json.dump([order.dict()], f, indent=2)
-
-    return {"status": "added", "order": order.dict()}
-
-
-@app.get("/orderbook")
-def get_orderbook():
-    """View current buy/sell book (after pruning and sorting)."""
-    book = load_book()
-    prune_expired(book)
-    sort_book(book)
-    return book
-
-
-@app.post("/match")
-def run_match():
-    """Run the matching engine — find best bid/ask, sign trade."""
-    if not ENCLAVE_PRIV:
-        raise HTTPException(500, "ENCLAVE_PRIV not set")
-
-    book = load_book()
+    # --- Clean + sort ---
     prune_expired(book)
     sort_book(book)
 
-    # Inject synthetic liquidity
-    inject_mm_quotes(book, REF_PRICE, MM_ADDRESS, BASE_TOKEN, QUOTE_TOKEN, spread_bps=50)
-    save_book(book)
-
-    # Try to match any orders
+    # --- Attempt match ---
     try:
-        buy, sell, trade_px = try_match(book)
+        buy, sell, price = try_match(book)
     except Exception as e:
-        return {"status": "no_match", "error": str(e)}
+        print(f"ℹ️ No match found: {e}")
+        save_book(book)
+        result = {"status": "no_match", "reason": str(e)}
+        with open(RESULT_PATH, "w") as f:
+            json.dump(result, f, indent=2)
+        print("✅ Result written: no match.")
+        return
 
-    # Build and sign a settlement trade
+    print(f"✅ Match found! Price {price}")
     trade = build_trade(buy, sell)
     sig, enclave = sign_trade(trade, ENCLAVE_PRIV)
 
-    # Remove matched orders from book
-    book["buy"].remove(buy)
-    book["sell"].remove(sell)
+    # Remove executed orders
+    if buy in book["buy"]:
+        book["buy"].remove(buy)
+    if sell in book["sell"]:
+        book["sell"].remove(sell)
     save_book(book)
 
     result = {
         "status": "matched",
-        "price": trade_px,
+        "price": price,
         "trade": trade,
         "signature": sig,
         "enclave": enclave,
@@ -133,13 +87,13 @@ def run_match():
     with open(RESULT_PATH, "w") as f:
         json.dump(result, f, indent=2)
 
-    return result
+    print("✅ Match written to /iexec_out/result.json")
+    print(json.dumps(result, indent=2))
 
 
-@app.get("/trade/latest")
-def latest_trade():
-    """Return latest trade result (if any)."""
-    if not os.path.exists(RESULT_PATH):
-        raise HTTPException(404, "No trades yet")
-    with open(RESULT_PATH) as f:
-        return json.load(f)
+if __name__ == "__main__":
+    print("🚀 iDarkPool Worker starting...")
+
+    main()
+
+    export_orderbook()
