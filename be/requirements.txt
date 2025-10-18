@@ -1,8 +1,0 @@
-pydantic
-fastapi==0.110.0
-uvicorn==0.30.0
-eth-account==0.10.0
-web3==6.11.0
-# requirements must be compatible with python 3.13.3
-pyfiglet==1.0.2
-borsh-construct==0.1.0
