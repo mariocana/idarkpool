@@ -14,7 +14,7 @@ from eth_abi import encode as abi_encode
 # -------------------------------------------------
 load_dotenv()
 RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")              # enclave signer key
+PRIVATE_KEY = os.getenv("ENCLAVE_PRIV")              # enclave signer key
 CHAIN_ID = int(os.getenv("CHAIN_ID", 31337))
 SETTLEMENT_ADDR = os.getenv("SETTLEMENT_ADDR")
 WETHM_ADDR = os.getenv("WETHM_ADDR")

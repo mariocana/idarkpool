@@ -1,7 +1,3 @@
-# SPDX-License-Identifier: MIT
-# iDarkPool Local Worker - Mario Canalella 2025
-# Version: v1 (no FastAPI)
-
 import json
 import os
 import time
@@ -11,14 +7,13 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from eth_abi import encode as abi_encode
 
-
 # -------------------------------------------------
 # 1️⃣  Load configuration
 # -------------------------------------------------
 load_dotenv()
 
 RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+PRIVATE_KEY = os.getenv("ENCLAVE_PRIV")
 CHAIN_ID = int(os.getenv("CHAIN_ID", 31337))
 SETTLEMENT_ADDR = os.getenv("SETTLEMENT_ADDR")
 WETHM_ADDR = os.getenv("WETHM_ADDR")
