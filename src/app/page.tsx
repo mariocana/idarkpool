@@ -158,30 +158,9 @@ export default function Home() {
         }
     };
 
-    /*const processProtectedData = async (data?: ProtectedData) => {
-        if (!dataProtectorCore || !data) return;
-        if (isGrantingAccess) {
-            setIsDataProcessing(true);
-            try {
-                const response = await dataProtectorCore.processProtectedData({
-                    protectedData: data.address,
-                    app: '0x9B0A0Fc519e7DE7E310e51C8b8583AF827fDa720',
-                });
-                console.info("Responde from Process Protected Data:", response);
-                setIsDataProcessing(true);
-            } catch (error) {
-                console.error("Error processing data:", error);
-            } finally {
-                setIsGrantingAccess(false);
-            }
-        }
-    };*/
-
     const protectData = async (event: { preventDefault: () => void }) => {
         event.preventDefault();
         if (dataProtectorCore) {
-            setIsLoadingBuy(true);
-            setIsLoadingSell(true)
             try {
                 const protectedData = await dataProtectorCore.protectData({
                     name: Math.random().toFixed().toString().slice(2, 11),

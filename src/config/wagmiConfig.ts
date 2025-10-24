@@ -11,6 +11,8 @@ if (!projectId) {
   throw new Error('You need to provide NEXT_PUBLIC_REOWN_PROJECT_ID env variable');
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
 const networks = Object.values(wagmiNetworks) as [
   AppKitNetwork,
   ...AppKitNetwork[],
