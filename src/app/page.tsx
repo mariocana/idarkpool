@@ -6,7 +6,6 @@ import {useAccount, useDisconnect, useChainId, useSwitchChain} from "wagmi";
 import {
     IExecDataProtector,
     IExecDataProtectorCore,
-
     ProtectedData,
     GrantedAccess,
 } from "@iexec/dataprotector";
@@ -43,11 +42,12 @@ export default function Home() {
         useState<IExecDataProtectorCore | null>(null);
     const [dataToProtect, setDataToProtect] = useState({data: "",});
     const [protectedData, setProtectedData] = useState<ProtectedData>();
-    const [isLoadingSell, setIsLoadingSell] = useState(false);
-    const [isLoadingBuy, setIsLoadingBuy] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [grantedAccess, setGrantedAccess] = useState<GrantedAccess>();
     const [isGrantingAccess, setIsGrantingAccess] = useState(false);
+    const [isOnChain, setIsOnChain] = useState(false);
+    const [finalHash, setFinalHash] = useState("");
 
     const networks = Object.values(wagmiNetworks);
 
@@ -146,8 +146,7 @@ export default function Home() {
                 const process = await dataProtectorCore.processProtectedData({
                     protectedData: data.address,
                     app: '0x9B0A0Fc519e7DE7E310e51C8b8583AF827fDa720',
-                    appMaxPrice: 3000000000, // 5 nRLC budget (enough for 2 + 2 nRLC)
-                    //workerpool: "0xB967057a21dc6A66A29721d96b8Aa7454B7c383F", // 👈 use the pool you found
+                    appMaxPrice: 3000000000,
                 });
                 console.log("process from processProtectedData: ", process);
 
@@ -198,8 +197,7 @@ export default function Home() {
             } catch (error) {
                 console.error("Error protecting data:", error);
             } finally {
-                setIsLoadingBuy(true);
-                setIsLoadingSell(true);
+                setIsLoading(true);
             }
         }
     };
@@ -219,7 +217,7 @@ export default function Home() {
                                 htmlFor="chain-selector"
                                 className="text-sm font-medium text-gray-700"
                             >
-                                Chain:
+                                iExec Worker Chain:
                             </label>
                             <select
                                 id="chain-selector"
@@ -258,7 +256,7 @@ export default function Home() {
                         <form onSubmit={protectData} className="mb-8 space-x-6">
 
                             <button
-                                disabled={isLoadingBuy || isLoadingSell}
+                                disabled={isLoading}
                                 onClick={() => {
                                     //MOCKED
                                     setDataToProtect(() => ({
@@ -270,21 +268,6 @@ export default function Home() {
                             >
                                 Buy 1 IDP
                             </button>
-
-                            <button
-                                disabled={isLoadingBuy || isLoadingSell}
-                                onClick={() => {
-                                    //MOCKED
-                                    setDataToProtect(() => ({
-                                        data: 'sell'
-                                    }))
-                                }}
-                                type="submit"
-                                className="secondary"
-                            >
-                                Sell 1 IDP
-                            </button>
-
                         </form>
 
                         {protectedData && (
@@ -394,9 +377,32 @@ export default function Home() {
                                     </div>
                                 </div>
                             )}
+
                         </div>
-                        {/* Get Task Status */}
-                        {/* TODO */}
+                        <div className="mt-12 pt-8 border-t border-gray-200">
+
+                            {isOnChain && (
+                                <div className="bg-blue-100 border border-blue-300 rounded-xl p-6 mt-6">
+                                    <h3 className="text-blue-800 mb-4 text-lg font-semibold">
+                                        ✅ Trade on Chain!
+                                    </h3>
+                                    <div className="text-blue-800 space-y-2 text-sm">
+                                        <p>
+                                            <strong>See on Base Explorer:
+
+                                                <a
+                                                    href={'https://base-sepolia.blockscout.com/tx/' + finalHash}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="ml-2 inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                                                >
+                                                    finalHash <ExternalLinkIcon/>
+                                                </a></strong>
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : (
                     <div className="text-center py-12 px-6">
